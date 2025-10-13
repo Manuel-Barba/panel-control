@@ -24,6 +24,9 @@ export function UsersTable() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'pro' | 'free'>('all')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -134,6 +137,59 @@ export function UsersTable() {
       setShowModal(false)
       setSelectedUser(null)
       setNewAccountType(null)
+      setError(null)
+      setSuccess(null)
+    }
+  }
+
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user)
+    setShowDeleteModal(true)
+    setError(null)
+    setSuccess(null)
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return
+
+    try {
+      setIsDeleting(true)
+      setError(null)
+
+      // Eliminar de la base de datos
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userToDelete.id)
+
+      if (error) {
+        throw new Error(`Error al eliminar usuario: ${error.message}`)
+      }
+
+      // Actualizar la lista local
+      setUsers(users.filter(user => user.id !== userToDelete.id))
+
+      setSuccess(`Usuario ${userToDelete.email} eliminado exitosamente`)
+      
+      // Cerrar modal después de un breve delay
+      setTimeout(() => {
+        setShowDeleteModal(false)
+        setUserToDelete(null)
+        setSuccess(null)
+      }, 1500)
+
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      setError(error instanceof Error ? error.message : 'Error desconocido al eliminar usuario')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const closeDeleteModal = () => {
+    if (!isDeleting) {
+      setShowDeleteModal(false)
+      setUserToDelete(null)
       setError(null)
       setSuccess(null)
     }
@@ -293,6 +349,13 @@ export function UsersTable() {
                         <UserX size={14} />
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDeleteUser(user)}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-red-200 hover:border-red-300 transition-colors"
+                      title="Eliminar usuario"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -310,7 +373,7 @@ export function UsersTable() {
         </div>
       )}
 
-      {/* Modal de confirmación */}
+      {/* Modal de confirmación para cambio de tipo de cuenta */}
       <ConfirmationModal
         isOpen={showModal}
         onClose={closeModal}
@@ -320,6 +383,18 @@ export function UsersTable() {
         confirmText={isUpdating ? 'Cambiando...' : `Cambiar a ${newAccountType === 'pro' ? 'PRO' : 'GRATUITO'}`}
         confirmColor={newAccountType === 'pro' ? 'green' : 'yellow'}
         isLoading={isUpdating}
+      />
+
+      {/* Modal de confirmación para eliminar usuario */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDeleteUser}
+        title={`Eliminar usuario`}
+        message={`¿Estás seguro de que quieres eliminar permanentemente al usuario ${userToDelete?.email}? Esta acción no se puede deshacer.`}
+        confirmText={isDeleting ? 'Eliminando...' : 'Eliminar usuario'}
+        confirmColor="red"
+        isLoading={isDeleting}
       />
     </div>
   )
