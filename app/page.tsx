@@ -7,6 +7,7 @@ import { DashboardStats } from '@/components/DashboardStats'
 import { UsersTable } from '@/components/UsersTable'
 import { AnalyticsCharts } from '@/components/AnalyticsCharts'
 import { BusinessProfilesList } from '@/components/BusinessProfilesList'
+import { MentoresModule } from '@/components/MentoresModule'
 import { GraduationCap, RefreshCw, LogOut } from 'lucide-react'
 
 interface User {
@@ -127,25 +128,7 @@ export default function Dashboard() {
         )
       
       case 'mentores':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Mentores</h1>
-              <p className="text-gray-600">Gestión de mentores y solicitudes</p>
-            </div>
-            
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <GraduationCap className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Módulo de Mentores</h2>
-              <p className="text-gray-600 mb-4">
-                Esta funcionalidad estará disponible próximamente
-              </p>
-              <div className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg">
-                <span className="text-sm font-medium">En desarrollo</span>
-              </div>
-            </div>
-          </div>
-        )
+        return <MentoresModule />
       
       default:
         return null
