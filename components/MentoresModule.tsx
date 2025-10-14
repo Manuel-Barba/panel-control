@@ -37,6 +37,7 @@ interface Mentor {
   bio: string | null
   avatar_url: string | null
   linkedin_url: string | null
+  phone: string | null
   created_at: string
   updated_at: string
   meeting_requests_count?: number
@@ -67,6 +68,9 @@ export function MentoresModule() {
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null)
   const [showMentorDetails, setShowMentorDetails] = useState(false)
   const [activeTab, setActiveTab] = useState<'mentors' | 'requests'>('mentors')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [mentorToDelete, setMentorToDelete] = useState<Mentor | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [stats, setStats] = useState({
     totalMentors: 0,
     verifiedMentors: 0,
@@ -214,6 +218,49 @@ export function MentoresModule() {
         return 'bg-red-100 text-red-800 border-red-200'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const handleDeleteMentor = (mentor: Mentor) => {
+    setMentorToDelete(mentor)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteMentor = async () => {
+    if (!mentorToDelete) return
+
+    try {
+      setIsDeleting(true)
+
+      // Eliminar de la base de datos
+      const { error } = await supabase
+        .from('mentores')
+        .delete()
+        .eq('id', mentorToDelete.id)
+
+      if (error) {
+        throw new Error(`Error al eliminar mentor: ${error.message}`)
+      }
+
+      // Actualizar la lista local
+      setMentors(mentors.filter(mentor => mentor.id !== mentorToDelete.id))
+
+      // Cerrar modal
+      setShowDeleteModal(false)
+      setMentorToDelete(null)
+
+    } catch (error) {
+      console.error('Error deleting mentor:', error)
+      alert(error instanceof Error ? error.message : 'Error desconocido al eliminar mentor')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const closeDeleteModal = () => {
+    if (!isDeleting) {
+      setShowDeleteModal(false)
+      setMentorToDelete(null)
     }
   }
 
@@ -398,6 +445,12 @@ export function MentoresModule() {
                               <Mail className="h-4 w-4" />
                               <span>{mentor.email}</span>
                             </div>
+                            {mentor.phone && (
+                              <div className="flex items-center space-x-1">
+                                <Phone className="h-4 w-4" />
+                                <span>{mentor.phone}</span>
+                              </div>
+                            )}
                             {mentor.company && (
                               <div className="flex items-center space-x-1">
                                 <span className="font-medium">Empresa:</span>
@@ -476,6 +529,14 @@ export function MentoresModule() {
                               <ExternalLink className="h-4 w-4" />
                             </a>
                           )}
+
+                          <button
+                            onClick={() => handleDeleteMentor(mentor)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar mentor"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -605,6 +666,9 @@ export function MentoresModule() {
                     
                     <div className="space-y-1 text-sm text-gray-600">
                       <p><span className="font-medium">Email:</span> {selectedMentor.email}</p>
+                      {selectedMentor.phone && (
+                        <p><span className="font-medium">Teléfono:</span> {selectedMentor.phone}</p>
+                      )}
                       {selectedMentor.title && (
                         <p><span className="font-medium">Título:</span> {selectedMentor.title}</p>
                       )}
@@ -667,6 +731,54 @@ export function MentoresModule() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación para eliminar mentor */}
+      {showDeleteModal && mentorToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Eliminar Mentor</h3>
+              </div>
+              <button
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              ¿Estás seguro de que quieres eliminar permanentemente al mentor <strong>{mentorToDelete.name}</strong>? 
+              Esta acción no se puede deshacer y también se eliminarán todas las solicitudes de reuniones asociadas.
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDeleteMentor}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                )}
+                {isDeleting ? 'Eliminando...' : 'Eliminar Mentor'}
+              </button>
             </div>
           </div>
         </div>

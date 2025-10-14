@@ -38,6 +38,7 @@ interface Mentor {
   bio: string | null
   avatar_url: string | null
   linkedin_url: string | null
+  phone: string | null
   created_at: string
   updated_at: string
   meeting_requests_count?: number
@@ -69,6 +70,9 @@ export default function MentoresPage() {
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null)
   const [showMentorDetails, setShowMentorDetails] = useState(false)
   const [activeTab, setActiveTab] = useState<'mentors' | 'requests'>('mentors')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [mentorToDelete, setMentorToDelete] = useState<Mentor | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [stats, setStats] = useState({
     totalMentors: 0,
     verifiedMentors: 0,
@@ -216,6 +220,49 @@ export default function MentoresPage() {
         return 'bg-red-100 text-red-800 border-red-200'
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
+
+  const handleDeleteMentor = (mentor: Mentor) => {
+    setMentorToDelete(mentor)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeleteMentor = async () => {
+    if (!mentorToDelete) return
+
+    try {
+      setIsDeleting(true)
+
+      // Eliminar de la base de datos
+      const { error } = await supabase
+        .from('mentores')
+        .delete()
+        .eq('id', mentorToDelete.id)
+
+      if (error) {
+        throw new Error(`Error al eliminar mentor: ${error.message}`)
+      }
+
+      // Actualizar la lista local
+      setMentors(mentors.filter(mentor => mentor.id !== mentorToDelete.id))
+
+      // Cerrar modal
+      setShowDeleteModal(false)
+      setMentorToDelete(null)
+
+    } catch (error) {
+      console.error('Error deleting mentor:', error)
+      alert(error instanceof Error ? error.message : 'Error desconocido al eliminar mentor')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const closeDeleteModal = () => {
+    if (!isDeleting) {
+      setShowDeleteModal(false)
+      setMentorToDelete(null)
     }
   }
 
@@ -398,24 +445,30 @@ export default function MentoresPage() {
                               )}
                             </div>
                             
-                            <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
-                              <div className="flex items-center space-x-1">
-                                <Mail className="h-4 w-4" />
-                                <span>{mentor.email}</span>
-                              </div>
-                              {mentor.company && (
-                                <div className="flex items-center space-x-1">
-                                  <span className="font-medium">Empresa:</span>
-                                  <span>{mentor.company}</span>
-                                </div>
-                              )}
-                              {mentor.location && (
-                                <div className="flex items-center space-x-1">
-                                  <MapPin className="h-4 w-4" />
-                                  <span>{mentor.location}</span>
-                                </div>
-                              )}
+                          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                            <div className="flex items-center space-x-1">
+                              <Mail className="h-4 w-4" />
+                              <span>{mentor.email}</span>
                             </div>
+                            {mentor.phone && (
+                              <div className="flex items-center space-x-1">
+                                <Phone className="h-4 w-4" />
+                                <span>{mentor.phone}</span>
+                              </div>
+                            )}
+                            {mentor.company && (
+                              <div className="flex items-center space-x-1">
+                                <span className="font-medium">Empresa:</span>
+                                <span>{mentor.company}</span>
+                              </div>
+                            )}
+                            {mentor.location && (
+                              <div className="flex items-center space-x-1">
+                                <MapPin className="h-4 w-4" />
+                                <span>{mentor.location}</span>
+                              </div>
+                            )}
+                          </div>
                             
                             <div className="flex items-center space-x-4 mb-3">
                               <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getAvailabilityColor(mentor.availability)}`}>
@@ -458,30 +511,38 @@ export default function MentoresPage() {
                             <div className="text-orange-600">{mentor.pending_requests_count || 0} pendientes</div>
                           </div>
                           
-                          <div className="flex space-x-1">
-                            <button
-                              onClick={() => {
-                                setSelectedMentor(mentor)
-                                setShowMentorDetails(true)
-                              }}
-                              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="Ver detalles"
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => {
+                              setSelectedMentor(mentor)
+                              setShowMentorDetails(true)
+                            }}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Ver detalles"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          
+                          {mentor.linkedin_url && (
+                            <a
+                              href={mentor.linkedin_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Ver LinkedIn"
                             >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            
-                            {mentor.linkedin_url && (
-                              <a
-                                href={mentor.linkedin_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                title="Ver LinkedIn"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
-                            )}
-                          </div>
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          )}
+
+                          <button
+                            onClick={() => handleDeleteMentor(mentor)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar mentor"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </div>
                         </div>
                       </div>
                     </div>
