@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Edit, Trash2, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Edit, Trash2, UserCheck, UserX, AlertCircle, RefreshCw } from 'lucide-react'
 import { ConfirmationModal } from './ConfirmationModal'
 
 interface User {
@@ -27,6 +27,7 @@ export function UsersTable() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [clearingCache, setClearingCache] = useState<string | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -195,6 +196,55 @@ export function UsersTable() {
     }
   }
 
+  const handleClearCache = async (user: User) => {
+    try {
+      setClearingCache(user.id)
+      setError(null)
+      setSuccess(null)
+
+      const token = localStorage.getItem('admin_token')
+      if (!token) {
+        throw new Error('No hay token de autenticación')
+      }
+
+      const response = await fetch('/api/cache/clear-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          userEmail: user.email
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al limpiar caché')
+      }
+
+      setSuccess(`Caché limpiado exitosamente para ${user.email}`)
+      
+      // Limpiar mensaje después de 3 segundos
+      setTimeout(() => {
+        setSuccess(null)
+      }, 3000)
+
+    } catch (error) {
+      console.error('Error limpiando caché:', error)
+      setError(error instanceof Error ? error.message : 'Error desconocido al limpiar caché')
+      
+      // Limpiar mensaje después de 5 segundos
+      setTimeout(() => {
+        setError(null)
+      }, 5000)
+    } finally {
+      setClearingCache(null)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
       year: 'numeric',
@@ -349,6 +399,18 @@ export function UsersTable() {
                         <UserX size={14} />
                       </button>
                     )}
+                    <button
+                      onClick={() => handleClearCache(user)}
+                      disabled={clearingCache === user.id}
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Limpiar caché del usuario"
+                    >
+                      {clearingCache === user.id ? (
+                        <RefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={14} />
+                      )}
+                    </button>
                     <button
                       onClick={() => handleDeleteUser(user)}
                       className="p-1.5 text-red-600 hover:bg-red-50 rounded border border-red-200 hover:border-red-300 transition-colors"
