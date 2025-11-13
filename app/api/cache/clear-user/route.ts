@@ -130,10 +130,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar autenticación de admin
-    const authHeader = request.headers.get('authorization')
+    // Intentar leer el header en diferentes formatos (case-insensitive)
+    const authHeader = request.headers.get('authorization') || 
+                       request.headers.get('Authorization') ||
+                       request.headers.get('AUTHORIZATION')
+    
+    // Log para debugging
+    console.log(`[${requestId}] Headers recibidos:`, {
+      hasAuthHeader: !!authHeader,
+      authHeaderPreview: authHeader ? authHeader.substring(0, 20) + '...' : 'No header',
+      allHeaders: Object.fromEntries(request.headers.entries())
+    })
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.warn(`[${requestId}] Intento de acceso sin token`)
+      console.warn(`[${requestId}] Intento de acceso sin token válido`, {
+        authHeader: authHeader ? authHeader.substring(0, 30) : 'null',
+        headersKeys: Array.from(request.headers.keys())
+      })
       return NextResponse.json(
         { success: false, error: 'Token no proporcionado' },
         { status: 401 }

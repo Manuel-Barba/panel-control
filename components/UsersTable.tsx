@@ -203,15 +203,29 @@ export function UsersTable() {
       setSuccess(null)
 
       const token = localStorage.getItem('admin_token')
-      if (!token) {
-        throw new Error('No hay token de autenticación')
+      if (!token || token.trim().length === 0) {
+        console.error('No hay token de autenticación en localStorage')
+        throw new Error('No hay token de autenticación. Por favor, inicia sesión nuevamente.')
       }
+
+      // Validar que el token tenga un formato mínimo válido
+      if (token.length < 10) {
+        console.error('Token inválido (muy corto):', token.length)
+        throw new Error('Token de autenticación inválido. Por favor, inicia sesión nuevamente.')
+      }
+
+      console.log('Enviando solicitud para limpiar caché:', {
+        userId: user.id,
+        userEmail: user.email,
+        tokenLength: token.length,
+        tokenPreview: token.substring(0, 20) + '...'
+      })
 
       const response = await fetch('/api/cache/clear-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token.trim()}`
         },
         body: JSON.stringify({
           userId: user.id,
