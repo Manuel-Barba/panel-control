@@ -32,7 +32,7 @@ El módulo de mentores permite administrar y supervisar todos los mentores regis
 - **Filtros de Búsqueda**: Por mentor, contacto, tema o equipo
 - **Estados de Solicitud**:
   - 🟡 Pendiente
-  - 🟢 Aprobada
+  - 🟢 Aceptada
   - 🔴 Rechazada
   - 🔵 Completada
 - **Información Detallada**:

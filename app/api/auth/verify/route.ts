@@ -47,18 +47,40 @@ export async function GET(request: NextRequest) {
       user: data
     })
 
-  } catch (error) {
-    console.error('Error verificando token:', error)
+  } catch (error: any) {
+    console.error('Error verificando token:', {
+      error: error.message,
+      name: error.name,
+      stack: error.stack
+    })
     
     if (error instanceof jwt.JsonWebTokenError) {
+      console.error('JWT Error específico:', error.message)
       return NextResponse.json(
         { success: false, error: 'Token inválido o expirado' },
         { status: 401 }
       )
     }
 
+    if (error instanceof jwt.TokenExpiredError) {
+      console.error('Token expirado')
+      return NextResponse.json(
+        { success: false, error: 'Token expirado. Por favor, inicia sesión nuevamente.' },
+        { status: 401 }
+      )
+    }
+
+    if (error instanceof jwt.NotBeforeError) {
+      console.error('Token no válido aún')
+      return NextResponse.json(
+        { success: false, error: 'Token no válido aún' },
+        { status: 401 }
+      )
+    }
+
+    console.error('Error inesperado en verify:', error)
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: 'Error interno del servidor al verificar token' },
       { status: 500 }
     )
   }

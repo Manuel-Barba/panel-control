@@ -52,7 +52,7 @@ interface MeetingRequest {
   topic: string
   date: string
   time: string
-  status: 'Pendiente' | 'Aprobada' | 'Rechazada' | 'Completada'
+  status: 'Pendiente' | 'Aceptada' | 'Rechazada' | 'Completada'
   created_at: string
   meeting_link: string | null
   mentor_name?: string
