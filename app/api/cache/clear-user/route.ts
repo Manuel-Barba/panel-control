@@ -3,7 +3,22 @@ import jwt from 'jsonwebtoken'
 
 // Validar y obtener variables de entorno al inicio del módulo
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET
-const MAIN_APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.MAIN_APP_URL
+let MAIN_APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.MAIN_APP_URL
+
+// Asegurar HTTPS en producción
+if (MAIN_APP_URL && process.env.NODE_ENV === 'production') {
+  try {
+    const url = new URL(MAIN_APP_URL)
+    // Si la URL usa HTTP en producción, cambiarla a HTTPS
+    if (url.protocol === 'http:' && !url.hostname.includes('localhost')) {
+      url.protocol = 'https:'
+      MAIN_APP_URL = url.toString()
+      console.log('[PANEL CONTROL] ⚠️  URL actualizada a HTTPS para producción:', MAIN_APP_URL)
+    }
+  } catch (error) {
+    console.error('[PANEL CONTROL] ⚠️  Error procesando MAIN_APP_URL:', error)
+  }
+}
 
 // Validación de configuración al cargar el módulo
 if (!JWT_SECRET || JWT_SECRET === 'your-secret-key-change-this-in-production') {
@@ -17,6 +32,16 @@ if (!MAIN_APP_URL || MAIN_APP_URL === 'http://localhost:3000') {
   console.error('[PANEL CONTROL] ⚠️  MAIN_APP_URL no está configurado o usa valor por defecto')
   if (process.env.NODE_ENV === 'production') {
     throw new Error('MAIN_APP_URL debe estar configurado en producción')
+  }
+}
+
+// Log de la URL configurada (sin exponer información sensible)
+if (MAIN_APP_URL) {
+  try {
+    const url = new URL(MAIN_APP_URL)
+    console.log('[PANEL CONTROL] ✅ MAIN_APP_URL configurado:', `${url.protocol}//${url.hostname}`)
+  } catch (error) {
+    console.error('[PANEL CONTROL] ⚠️  MAIN_APP_URL tiene formato inválido')
   }
 }
 

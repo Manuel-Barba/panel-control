@@ -221,19 +221,46 @@ export function UsersTable() {
         tokenPreview: token.substring(0, 20) + '...'
       })
 
-      const response = await fetch('/api/cache/clear-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.trim()}`
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          userEmail: user.email
-        })
-      })
+      // Crear un AbortController para timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000) // 60 segundos timeout
 
-      const data = await response.json()
+      let response: Response
+      try {
+        response = await fetch('/api/cache/clear-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token.trim()}`
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            userEmail: user.email
+          }),
+          signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        if (fetchError.name === 'AbortError') {
+          throw new Error('La solicitud tardó demasiado. Por favor, intenta nuevamente.')
+        }
+        throw new Error(`Error de conexión: ${fetchError.message || 'No se pudo conectar con el servidor'}`)
+      }
+
+      // Verificar si la respuesta es JSON antes de parsear
+      let data: any
+      try {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json()
+        } else {
+          const text = await response.text()
+          throw new Error(`Respuesta inesperada del servidor: ${text.substring(0, 100)}`)
+        }
+      } catch (parseError: any) {
+        throw new Error(`Error procesando respuesta: ${parseError.message || 'Respuesta inválida del servidor'}`)
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Error al limpiar caché')
