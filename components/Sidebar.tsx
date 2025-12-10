@@ -9,7 +9,9 @@ import {
   GraduationCap,
   AppWindow,
   Menu,
-  X
+  X,
+  Mail,
+  Send
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +35,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       label: 'Mentores',
       icon: GraduationCap,
       description: 'Gestión de mentores'
+    },
+    {
+      id: 'comunicaciones',
+      label: 'Comunicaciones',
+      icon: Send,
+      description: 'Emails y notificaciones'
     },
     {
       id: 'apps-docs',

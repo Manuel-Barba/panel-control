@@ -9,6 +9,7 @@ import { AnalyticsCharts } from '@/components/AnalyticsCharts'
 import { BusinessProfilesList } from '@/components/BusinessProfilesList'
 import { MentoresModule } from '@/components/MentoresModule'
 import { AppsDocsModule } from '@/components/AppsDocsModule'
+import { ComunicacionesModule } from '@/components/ComunicacionesModule'
 import { GraduationCap, RefreshCw, LogOut } from 'lucide-react'
 
 interface User {
@@ -130,6 +131,9 @@ export default function Dashboard() {
       
       case 'mentores':
         return <MentoresModule />
+      
+      case 'comunicaciones':
+        return <ComunicacionesModule />
       
       case 'apps-docs':
         return <AppsDocsModule />
