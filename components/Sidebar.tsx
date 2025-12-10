@@ -7,6 +7,7 @@ import {
   UserCheck, 
   UserX, 
   GraduationCap,
+  AppWindow,
   Menu,
   X
 } from 'lucide-react'
@@ -32,6 +33,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       label: 'Mentores',
       icon: GraduationCap,
       description: 'Gestión de mentores'
+    },
+    {
+      id: 'apps-docs',
+      label: 'Apps y docs',
+      icon: AppWindow,
+      description: 'Mini-apps y plantillas'
     }
   ]
 
