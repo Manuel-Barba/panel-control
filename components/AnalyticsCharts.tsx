@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { FileText, Bot, CreditCard, TrendingUp } from 'lucide-react'
+import { MessageSquare, Bot, CreditCard, TrendingUp } from 'lucide-react'
 
 interface AnalyticsData {
-  businessPlanPercentage: number
+  activeConversationsPercentage: number
+  activeConversationsWithAssistantPercentage: number
+  activeConversationsWithAssistantCount: number
   assistantConfigPercentage: number
   paidUsersPercentage: number
   freeUsersPercentage: number
@@ -13,7 +15,9 @@ interface AnalyticsData {
 
 export function AnalyticsCharts() {
   const [data, setData] = useState<AnalyticsData>({
-    businessPlanPercentage: 0,
+    activeConversationsPercentage: 0,
+    activeConversationsWithAssistantPercentage: 0,
+    activeConversationsWithAssistantCount: 0,
     assistantConfigPercentage: 0,
     paidUsersPercentage: 0,
     freeUsersPercentage: 0
@@ -42,7 +46,9 @@ export function AnalyticsCharts() {
 
       if (totalUsers === 0) {
         setData({
-          businessPlanPercentage: 0,
+          activeConversationsPercentage: 0,
+          activeConversationsWithAssistantPercentage: 0,
+          activeConversationsWithAssistantCount: 0,
           assistantConfigPercentage: 0,
           paidUsersPercentage: 0,
           freeUsersPercentage: 0
@@ -50,15 +56,42 @@ export function AnalyticsCharts() {
         return
       }
 
-      // 1. Porcentaje de usuarios que creó business plan
-      const { data: businessPlans, error: bpError } = await supabase
-        .from('business_plans')
-        .select('user_id')
+      // 1. Porcentaje de usuarios que mandaron 2 o más mensajes a su super asistente
+      // Obtener todos los mensajes con su conversation_id
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('conversation_id')
 
-      let businessPlanUsers = 0
-      if (!bpError && businessPlans) {
-        const uniqueUsers = new Set(businessPlans.map(bp => bp.user_id))
-        businessPlanUsers = uniqueUsers.size
+      // Obtener todas las conversaciones con su user_id
+      const { data: conversations, error: convError } = await supabase
+        .from('conversations')
+        .select('id, user_id')
+
+      let activeConversationUsers = 0
+      if (!messagesError && !convError && messages && conversations) {
+        // Crear un mapa de conversation_id -> user_id
+        const conversationToUser = new Map<string, string>()
+        conversations.forEach(conv => {
+          if (conv.id && conv.user_id) {
+            conversationToUser.set(conv.id, conv.user_id)
+          }
+        })
+
+        // Contar mensajes por usuario
+        const userMessageCount = new Map<string, number>()
+        messages.forEach(msg => {
+          if (msg.conversation_id) {
+            const userId = conversationToUser.get(msg.conversation_id)
+            if (userId) {
+              const count = userMessageCount.get(userId) || 0
+              userMessageCount.set(userId, count + 1)
+            }
+          }
+        })
+        
+        // Contar usuarios con 2 o más mensajes
+        activeConversationUsers = Array.from(userMessageCount.entries())
+          .filter(([_, count]) => count >= 2).length
       }
 
       // 2. Porcentaje de usuarios que configuró asistente
@@ -68,13 +101,55 @@ export function AnalyticsCharts() {
         .eq('is_configured', true)
 
       const assistantConfigUsers = assistantConfigs?.length || 0
+      
+      // Crear un Set de usuarios con asistente configurado para filtrar
+      const usersWithAssistant = new Set<string>()
+      if (assistantConfigs) {
+        assistantConfigs.forEach(config => {
+          if (config.user_id) {
+            usersWithAssistant.add(config.user_id)
+          }
+        })
+      }
+
+      // 2b. Porcentaje de usuarios con asistente configurado que mandaron 2 o más mensajes
+      let activeConversationUsersWithAssistant = 0
+      if (!messagesError && !convError && messages && conversations && usersWithAssistant.size > 0) {
+        // Crear un mapa de conversation_id -> user_id
+        const conversationToUser = new Map<string, string>()
+        conversations.forEach(conv => {
+          if (conv.id && conv.user_id) {
+            conversationToUser.set(conv.id, conv.user_id)
+          }
+        })
+
+        // Contar mensajes por usuario (solo usuarios con asistente configurado)
+        const userMessageCount = new Map<string, number>()
+        messages.forEach(msg => {
+          if (msg.conversation_id) {
+            const userId = conversationToUser.get(msg.conversation_id)
+            if (userId && usersWithAssistant.has(userId)) {
+              const count = userMessageCount.get(userId) || 0
+              userMessageCount.set(userId, count + 1)
+            }
+          }
+        })
+        
+        // Contar usuarios con asistente que tienen 2 o más mensajes
+        activeConversationUsersWithAssistant = Array.from(userMessageCount.entries())
+          .filter(([_, count]) => count >= 2).length
+      }
 
       // 3. Porcentaje de usuarios de paga vs gratuitos
       const paidUsers = users?.filter(user => user.account_type === 'pro').length || 0
       const freeUsers = users?.filter(user => user.account_type === 'free').length || 0
 
       setData({
-        businessPlanPercentage: Math.round((businessPlanUsers / totalUsers) * 100),
+        activeConversationsPercentage: Math.round((activeConversationUsers / totalUsers) * 100),
+        activeConversationsWithAssistantPercentage: usersWithAssistant.size > 0 
+          ? Math.round((activeConversationUsersWithAssistant / usersWithAssistant.size) * 100)
+          : 0,
+        activeConversationsWithAssistantCount: activeConversationUsersWithAssistant,
         assistantConfigPercentage: Math.round((assistantConfigUsers / totalUsers) * 100),
         paidUsersPercentage: Math.round((paidUsers / totalUsers) * 100),
         freeUsersPercentage: Math.round((freeUsers / totalUsers) * 100)
@@ -89,11 +164,19 @@ export function AnalyticsCharts() {
 
   const chartCards = [
     {
-      title: 'Business Plans Creados',
-      percentage: data.businessPlanPercentage,
-      icon: FileText,
+      title: 'Interacciones Totales con Asistente',
+      percentage: data.activeConversationsPercentage,
+      icon: MessageSquare,
       color: 'bg-blue-500',
-      description: 'Usuarios con business plan'
+      description: 'Usuarios con 2+ mensajes al asistente'
+    },
+    {
+      title: 'Interacciones con asistente, filtrado',
+      percentage: data.activeConversationsWithAssistantPercentage,
+      count: data.activeConversationsWithAssistantCount,
+      icon: MessageSquare,
+      color: 'bg-indigo-500',
+      description: 'Del 100% de users con asistente, cuántos mandaron 2+ mensajes'
     },
     {
       title: 'Asistentes Configurados',
@@ -114,7 +197,7 @@ export function AnalyticsCharts() {
   if (loading) {
     return (
       <>
-        {[...Array(3)].map((_, i) => (
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="bg-white rounded-lg border border-gray-200 p-6 animate-pulse">
             <div className="flex items-center justify-between mb-3">
               <div className="h-4 bg-gray-200 rounded w-32"></div>
@@ -142,8 +225,17 @@ export function AnalyticsCharts() {
             </div>
             
             <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-bold text-gray-900">{chart.percentage}%</span>
-              <TrendingUp className="h-4 w-4 text-gray-600" />
+              {chart.count !== undefined ? (
+                <>
+                  <span className="text-2xl font-bold text-gray-900">{chart.count}</span>
+                  <span className="text-lg text-gray-600">({chart.percentage}%)</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-2xl font-bold text-gray-900">{chart.percentage}%</span>
+                  <TrendingUp className="h-4 w-4 text-gray-600" />
+                </>
+              )}
             </div>
             
             <p className="text-xs text-gray-500 mt-1">{chart.description}</p>
