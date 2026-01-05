@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, Clock, Circle, RefreshCw, User } from 'lucide-react'
+import { Users, Clock, Circle, RefreshCw, User, ChevronLeft, ChevronRight } from 'lucide-react'
+
+// IDs de usuarios a excluir de las estadísticas
+const EXCLUDED_USER_IDS = [
+  "9f3344cc-c9e2-41ac-9fec-579d2d5f9c6c",
+  "8b7ee356-42a4-41c5-be93-5fecd861037f",
+  "8ea2524e-9e62-46e0-9857-40005d73ccf3"
+]
 
 interface UserActivity {
   id: string
@@ -31,6 +38,8 @@ export function ActiveUsersPanel() {
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const usersPerPage = 5
 
   useEffect(() => {
     fetchActiveUsers()
@@ -64,6 +73,8 @@ export function ActiveUsersPanel() {
       if (data) {
         setUsers(data)
         calculateStats(data)
+        // Resetear a la primera página si cambian los datos
+        setCurrentPage(1)
       }
     } catch (error) {
       console.error('Error:', error)
@@ -74,28 +85,31 @@ export function ActiveUsersPanel() {
   }
 
   const calculateStats = (userData: UserActivity[]) => {
+    // Filtrar usuarios excluidos para las estadísticas
+    const filteredUserData = userData.filter(user => !EXCLUDED_USER_IDS.includes(user.id))
+    
     const now = new Date()
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    const activeNow = userData.filter(user => {
+    const activeNow = filteredUserData.filter(user => {
       if (!user.last_active) return false
       return new Date(user.last_active) >= fiveMinutesAgo
     }).length
 
-    const activeToday = userData.filter(user => {
+    const activeToday = filteredUserData.filter(user => {
       if (!user.last_active) return false
       return new Date(user.last_active) >= today
     }).length
 
-    const activeThisWeek = userData.filter(user => {
+    const activeThisWeek = filteredUserData.filter(user => {
       if (!user.last_active) return false
       return new Date(user.last_active) >= weekAgo
     }).length
 
     setStats({
-      totalActive: userData.length,
+      totalActive: filteredUserData.length,
       activeNow,
       activeToday,
       activeThisWeek
@@ -150,6 +164,20 @@ export function ActiveUsersPanel() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  // Calcular paginación
+  const totalPages = Math.ceil(users.length / usersPerPage)
+  const startIndex = (currentPage - 1) * usersPerPage
+  const endIndex = startIndex + usersPerPage
+  const paginatedUsers = users.slice(startIndex, endIndex)
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(1, prev - 1))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(totalPages, prev + 1))
   }
 
   if (loading) {
@@ -239,7 +267,7 @@ export function ActiveUsersPanel() {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => {
+            {paginatedUsers.map((user) => {
               const activityStatus = getActivityStatus(user.last_active)
               return (
                 <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -293,6 +321,36 @@ export function ActiveUsersPanel() {
           <Users size={48} className="mx-auto mb-4 text-gray-300" />
           <p>No hay usuarios con actividad registrada</p>
           <p className="text-sm mt-1">Los usuarios aparecerán aquí cuando inicien sesión</p>
+        </div>
+      )}
+
+      {/* Paginación */}
+      {users.length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="text-sm text-gray-600">
+            Mostrando {startIndex + 1} - {Math.min(endIndex, users.length)} de {users.length} usuarios
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </button>
+            <div className="px-4 py-1.5 text-sm text-gray-700">
+              Página {currentPage} de {totalPages}
+            </div>
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              Siguiente
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       )}
     </div>

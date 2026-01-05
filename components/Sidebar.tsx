@@ -11,7 +11,8 @@ import {
   Menu,
   X,
   Mail,
-  Send
+  Send,
+  BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +42,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       label: 'Comunicaciones',
       icon: Send,
       description: 'Emails y notificaciones'
+    },
+    {
+      id: 'estadisticas',
+      label: 'Estadísticas',
+      icon: BarChart3,
+      description: 'Sesiones y análisis'
     },
     {
       id: 'apps-docs',

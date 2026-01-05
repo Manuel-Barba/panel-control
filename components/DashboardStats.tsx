@@ -4,6 +4,14 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Users, UserCheck, UserX, TrendingUp } from 'lucide-react'
 
+// IDs de usuarios a excluir de las estadísticas
+const EXCLUDED_USER_IDS = [
+  "9f3344cc-c9e2-41ac-9fec-579d2d5f9c6c",
+  "8b7ee356-42a4-41c5-be93-5fecd861037f",
+  "8ea2524e-9e62-46e0-9857-40005d73ccf3",
+  "878864c3-9580-46c4-882e-34307c817bc0"
+]
+
 interface UserStats {
   totalUsers: number
   proUsers: number
@@ -44,20 +52,23 @@ export function DashboardStats() {
       }
 
       if (users) {
+        // Filtrar usuarios excluidos
+        const filteredUsers = users.filter(user => !EXCLUDED_USER_IDS.includes(user.id))
+        
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         
-        const newUsersToday = users.filter(user => {
+        const newUsersToday = filteredUsers.filter(user => {
           const userDate = new Date(user.created_at)
           userDate.setHours(0, 0, 0, 0)
           return userDate.getTime() === today.getTime()
         }).length
 
-        const proUsers = users.filter(user => user.account_type === 'pro').length
-        const freeUsers = users.filter(user => user.account_type === 'free').length
+        const proUsers = filteredUsers.filter(user => user.account_type === 'pro').length
+        const freeUsers = filteredUsers.filter(user => user.account_type === 'free').length
 
         setStats({
-          totalUsers: users.length,
+          totalUsers: filteredUsers.length,
           proUsers,
           freeUsers,
           newUsersToday
