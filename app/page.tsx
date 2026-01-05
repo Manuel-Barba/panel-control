@@ -10,6 +10,7 @@ import { BusinessProfilesList } from '@/components/BusinessProfilesList'
 import { MentoresModule } from '@/components/MentoresModule'
 import { AppsDocsModule } from '@/components/AppsDocsModule'
 import { ComunicacionesModule } from '@/components/ComunicacionesModule'
+import { ActiveUsersPanel } from '@/components/ActiveUsersPanel'
 import { GraduationCap, RefreshCw, LogOut } from 'lucide-react'
 
 interface User {
@@ -118,6 +119,9 @@ export default function Dashboard() {
             </div>
             
             <DashboardStats key={`stats-${refreshKey}`} />
+            
+            {/* Panel de Usuarios Activos */}
+            <ActiveUsersPanel key={`active-users-${refreshKey}`} />
             
             {/* Nueva fila con 4 contenedores */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
