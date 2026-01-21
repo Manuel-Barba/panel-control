@@ -8,6 +8,7 @@ import { UsersTable } from '@/components/UsersTable'
 import { AnalyticsCharts } from '@/components/AnalyticsCharts'
 import { BusinessProfilesList } from '@/components/BusinessProfilesList'
 import { MentoresModule } from '@/components/MentoresModule'
+import { InstitucionesModule } from '@/components/InstitucionesModule'
 import { AppsDocsModule } from '@/components/AppsDocsModule'
 import { ComunicacionesModule } from '@/components/ComunicacionesModule'
 import { ActiveUsersPanel } from '@/components/ActiveUsersPanel'
@@ -136,6 +137,9 @@ export default function Dashboard() {
       
       case 'mentores':
         return <MentoresModule />
+      
+      case 'instituciones':
+        return <InstitucionesModule />
       
       case 'comunicaciones':
         return <ComunicacionesModule />

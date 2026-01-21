@@ -7,6 +7,7 @@ import {
   UserCheck, 
   UserX, 
   GraduationCap,
+  Building2,
   AppWindow,
   Menu,
   X,
@@ -36,6 +37,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       label: 'Mentores',
       icon: GraduationCap,
       description: 'Gestión de mentores'
+    },
+    {
+      id: 'instituciones',
+      label: 'Instituciones',
+      icon: Building2,
+      description: 'Solicitudes de alianzas'
     },
     {
       id: 'comunicaciones',
