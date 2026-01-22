@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { 
   Building2, 
   Users, 
@@ -68,23 +67,22 @@ export function InstitucionesModule() {
     try {
       setLoading(true)
       
-      const { data, error } = await supabase
-        .from('instituciones')
-        .select('*')
-        .order('created_at', { ascending: false })
+      const response = await fetch('/api/instituciones')
+      const result = await response.json()
 
-      if (error) {
-        console.error('Error fetching institutions:', error)
+      if (!result.success) {
+        console.error('Error fetching institutions:', result.error)
         return
       }
 
-      setInstitutions(data || [])
+      const data = result.data || []
+      setInstitutions(data)
 
-      const total = data?.length || 0
-      const pendientes = data?.filter(i => i.status === 'pendiente').length || 0
-      const aprobados = data?.filter(i => i.status === 'aprobado').length || 0
-      const rechazados = data?.filter(i => i.status === 'rechazado').length || 0
-      const totalUsuariosEstimados = data?.reduce((acc, i) => acc + (i.estimated_users || 0), 0) || 0
+      const total = data.length || 0
+      const pendientes = data.filter((i: Institution) => i.status === 'pendiente').length || 0
+      const aprobados = data.filter((i: Institution) => i.status === 'aprobado').length || 0
+      const rechazados = data.filter((i: Institution) => i.status === 'rechazado').length || 0
+      const totalUsuariosEstimados = data.reduce((acc: number, i: Institution) => acc + (i.estimated_users || 0), 0) || 0
 
       setStats({
         total,
@@ -105,36 +103,43 @@ export function InstitucionesModule() {
     try {
       setIsUpdatingStatus(true)
       
+      const institution = institutions.find(i => i.id === id)
       const updateData: any = {
-        status: newStatus,
-        updated_at: new Date().toISOString()
+        status: newStatus
       }
 
       if (newStatus === 'aprobado') {
         updateData.approved_at = new Date().toISOString()
-        const institution = institutions.find(i => i.id === id)
         if (institution) {
           updateData.max_users = institution.estimated_users || 100
         }
       }
 
-      const { error } = await supabase
-        .from('instituciones')
-        .update(updateData)
-        .eq('id', id)
+      const response = await fetch(`/api/instituciones/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      })
 
-      if (error) {
-        throw new Error(`Error al actualizar estado: ${error.message}`)
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(`Error al actualizar estado: ${result.error}`)
       }
 
+      // Actualizar estado local
+      const updatedInstitution = result.data
       setInstitutions(institutions.map(i => 
-        i.id === id ? { ...i, status: newStatus, ...updateData } : i
+        i.id === id ? updatedInstitution : i
       ))
 
       if (showDetails && selectedInstitution?.id === id) {
-        setSelectedInstitution({ ...selectedInstitution, status: newStatus, ...updateData })
+        setSelectedInstitution(updatedInstitution)
       }
 
+      // Recalcular estadísticas
       fetchData()
 
     } catch (error) {
@@ -212,13 +217,14 @@ export function InstitucionesModule() {
     try {
       setIsDeleting(true)
 
-      const { error } = await supabase
-        .from('instituciones')
-        .delete()
-        .eq('id', institutionToDelete.id)
+      const response = await fetch(`/api/instituciones/${institutionToDelete.id}`, {
+        method: 'DELETE'
+      })
 
-      if (error) {
-        throw new Error(`Error al eliminar institución: ${error.message}`)
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(`Error al eliminar institución: ${result.error}`)
       }
 
       setInstitutions(institutions.filter(i => i.id !== institutionToDelete.id))
